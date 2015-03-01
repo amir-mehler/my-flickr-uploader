@@ -1,0 +1,16 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    digest (0.0.1)
+    flickraw (0.9.8)
+    logger (1.2.8)
+    thread (0.1.5)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  digest
+  flickraw
+  logger
+  thread
