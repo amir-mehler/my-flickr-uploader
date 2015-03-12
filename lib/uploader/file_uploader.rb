@@ -1,9 +1,12 @@
 module Uploader
   class FileUploader
     def self.run!(queue, cache, logger)
+      logger.info "uploder thread started! (#{Thread.current.object_id})"
       while i = queue.pop
         upload(i[:path], i[:sum], cache, logger)
       end
+      sleep rand(10)
+      logger.info "uploader thread done! (#{Thread.current.object_id})"
     end
 
     def upload(path, sum, cache, logger)

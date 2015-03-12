@@ -23,6 +23,7 @@ module Uploader
 
       @logger = Logger.new(@base_dir + "/log/uploader_log", "daily")
       @logger.datetime_format = '%d-%m-%Y %H:%M:%S'
+      @logger.level = Logger::DEBUG
 
       @logger.info "<<< initialized config instance >>>"
     end

@@ -1,0 +1,16 @@
+
+Database
+--------
+Key-Value store. Key is hash sum of the photo. Value is the Flickr photo id. So
+far, it's gonna be 256 files (16^2) by two first chars of the hash hex digest.
+
+I should probably check out GDBM or http://propublica.github.io/daybreak/
+
+1. When uploading, we first successfully upload the photo
+   and only then store the photo id and hash.
+
+2. When checking all photos in flickr, we get the photo id
+   and then look for it in the db.
+
+3. When a photo is deleted from flicker we won't be uploading
+   it again since it's already in db. This is the desired behavior.

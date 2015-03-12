@@ -1,29 +1,55 @@
 require 'thread'
-require 'flickraw'
 
 module Uploader
   class Main
+
+    def irb
+      @conf = Uploader::Config.instance
+      Uploader::FlickrAuth.authenticate(@conf)
+      db = Uploader::FileHashDB.new(@conf)
+      puts "Starting irb. (@conf and db ready for use)"
+      require 'irb'
+      IRB.start
+      puts "done"
+    end
+
     def self.run!
       @conf = Uploader::Config.instance
       log = @conf.logger
       log.info "Starting the uploader"
 
-      FlickrAuth.authenticate(@conf)
+      Uploader::FlickrAuth.authenticate(@conf)
 
       db = Uploader::FileHashDB.new(@conf)
 
       queue = Queue.new
 
-      file_uploaders = []
-      @conf.upload_threads.times do
-        file_uploaders << Thread.new { Uploader::FileUploader.run!(queue, db, log) }
+      file_uploaders = @conf.upload_threads.times.map do
+        log.info "lunching thread"
+        Thread.new { Uploader::FileUploader.run!(queue, db, log) }
       end
 
-      Uploader::DiskCrawler.new.(@conf, cache, flickr).run!
+      # Uploader::DiskCrawler.new.(@conf, cache, flickr).run! # todo
 
+      sleep 1
       log.info "finished scanning all files"
 
-      # TODO now send nils to kill uploaders and wait
+      @conf.upload_threads.times do
+        queue << nil # this kills the threads during q.pop
+      end
+
+      sleep 1
+      log.info "make sure all threads are dead"
+      file_uploaders.each do |t|
+        if t.status == false
+          log.info "thread #{t.object_id} finished"
+        else
+          log.info "thread #{t.object_id} is not finished, waiting..."
+          t.join
+        end
+      end
+
+      log.info "-- fin --"
     end
   end
 end
