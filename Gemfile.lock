@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    daybreak (0.3.0)
     digest (0.0.1)
     flickraw (0.9.8)
     logger (1.2.8)
@@ -10,6 +11,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  daybreak
   digest
   flickraw
   logger

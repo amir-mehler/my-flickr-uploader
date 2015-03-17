@@ -52,7 +52,8 @@ module Uploader
           flickr.access_secret   = creds["flickr"]["access_secret"]
           tries = 3
           begin
-            flickr.test.login
+            login = flickr.test.login
+            conf.set_username(login.username)
           rescue Net::ReadTimeout => e
             retry unless (tries-=1).zero?
           rescue => e
@@ -67,7 +68,7 @@ module Uploader
         conf.logger.error "Authentication Error: #{e.message}"
         raise e
       end
-      conf.logger.info "Successfully logged in"
+      conf.logger.info "Successfully logged in as #{login.username}"
     end
   end
 end

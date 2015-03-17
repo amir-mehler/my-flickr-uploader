@@ -8,4 +8,7 @@ end
 
 require 'uploader'
 
+# Parse all photos in flickr and check that each photo ID has a DB entry
+# If one doesn't; download it and write it's hash sum to the DB.
+
 Uploader::FingerPrint.fix_em_all!

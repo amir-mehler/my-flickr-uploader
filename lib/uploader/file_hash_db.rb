@@ -1,14 +1,19 @@
+require 'Daybreak'
+
 module Uploader
   class FileHashDB
-    PART_PREFIX = 'sums.part'
 
     def initialize(conf)
       @db_dir = conf.db_dir
       @logger = conf.logger
       Dir.mkdir @db_dir unless File.directory? @db_dir
-      parts = Dir.glob(@db_dir + '/sums.part.*').length
-      @logger.info "initialized db with #{parts} partitions"
+      path = "#{@db_dir}/#{conf.username}.dbk"
+      @db = Daybreak::DB.new(path)
+      conf.set_db @db
+      @logger.info "initialized db: #{conf.username}.dbk"
     end
+
+    def close() @db.close; end
 
     def prefix(sum)
       raise "sum is expected to be hex digest string" unless sum.is_a? String

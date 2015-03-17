@@ -1,10 +1,46 @@
+Work:
+-----
+continue from finger_print.rb, parse photos from flickr, check db and stuff
+
+
+
+
+-------------------
+
+Stream
+------
+def uri_to_md5(uri)
+  md5 = Digest::MD5.new
+  Net::HTTP.start(uri.host, uri.port) do |http|
+    request = Net::HTTP::Get.new uri
+    http.request request do |response|
+      response.read_body do |chunk|
+        md5 << chunk
+        print '.'
+      end
+    end
+  end
+  md5.hexdigest
+end
+
 
 Database
 --------
-Key-Value store. Key is hash sum of the photo. Value is the Flickr photo id. So
-far, it's gonna be 256 files (16^2) by two first chars of the hash hex digest.
+Key-Value store.
+  Hash sum of the photo: string (MD5 Hex Digest. 32 hex chars)
+  Flickr photo id:       string
+  Uploaded?:             boolean
 
-I should probably check out GDBM or http://propublica.github.io/daybreak/
+DB File per account.
+Schema:
+-- key -- | -- value -- | -- comment --
+hash sum  |  flickr id  | Used for checking local photos we have
+flickr id |  hash sum   | Used for checking photos in flickr
+* both are filled up when we (1) successfully upload a photo
+  (2) update the hash sum of a photo from flickr
+
+
+Use daybreak: http://propublica.github.io/daybreak/
 
 1. When uploading, we first successfully upload the photo
    and only then store the photo id and hash.
@@ -14,3 +50,4 @@ I should probably check out GDBM or http://propublica.github.io/daybreak/
 
 3. When a photo is deleted from flicker we won't be uploading
    it again since it's already in db. This is the desired behavior.
+   We don't delete the photo id from flickr, it will never be used again.

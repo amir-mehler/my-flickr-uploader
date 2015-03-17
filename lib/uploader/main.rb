@@ -1,15 +1,18 @@
 require 'thread'
+require 'irb'
 
 module Uploader
+
   class Main
 
     def irb
       @conf = Uploader::Config.instance
       Uploader::FlickrAuth.authenticate(@conf)
       db = Uploader::FileHashDB.new(@conf)
-      puts "Starting irb. (@conf and db ready for use)"
-      require 'irb'
+      puts "Starting irb."
+      puts "Run: `@conf = Uploader::Config.instance` to get @conf"
       IRB.start
+      db.close
       puts "done"
     end
 
