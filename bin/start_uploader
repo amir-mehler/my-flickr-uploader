@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+unless RUBY_VERSION.match(/^2\./)
+  puts "Better use ruby 2.*"
+  exit 1
+end
+
 $: << File.expand_path("../../lib",__FILE__)
 
 Dir.chdir(File.expand_path("../../",__FILE__)) do

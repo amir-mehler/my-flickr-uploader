@@ -1,9 +1,19 @@
 Work:
 -----
-continue from finger_print.rb, parse photos from flickr, check db and stuff
+
+The MD5 is always 53cb73f74724b36bde1d9f22d3350edb
+Bug in the streaming function probably.
 
 
+Run on all photos in flickr.
+think of the local photos cache.
 
+
+Wishlist
+--------
+Params for fix index:
+- ignore existing tags
+- ignore existing DB entries
 
 -------------------
 
@@ -26,21 +36,26 @@ end
 
 Database
 --------
-Key-Value store.
-  Hash sum of the photo: string (MD5 Hex Digest. 32 hex chars)
-  Flickr photo id:       string
-  Uploaded?:             boolean
-
+Key-Value store. Daybreak: http://propublica.github.io/daybreak/
 DB File per account.
+
+data:
+1. Hash sum of the photo: string (MD5 Hex Digest. 32 hex chars)
+2. Flickr photo id:       string
+3. Dir path (relative to mount point) 'drive_name/photos/dir/subdir/subdir2' where 'drive_name' can be within /mnt/PC/drive_name/photos/...
+   So later in time, you can mount the same drive to another mount point and not need to re-scan it all.
+4. Last modification date of Dir
+
+
 Schema:
--- key -- | -- value -- | -- comment --
-hash sum  |  flickr id  | Used for checking local photos we have
-flickr id |  hash sum   | Used for checking photos in flickr
+-- key ---- | -- value -- | -- comment --
+hash sum    |  flickr id  | Used for checking local photos we have
+flickr id   |  hash sum   | Used for checking photos in flickr
 * both are filled up when we (1) successfully upload a photo
   (2) update the hash sum of a photo from flickr
+  The double entry is because I don't know how to index values in this db and this seems efficient enough
+path/to/dir | dir_mod     | relative to mount point which is configureable, epoch time
 
-
-Use daybreak: http://propublica.github.io/daybreak/
 
 1. When uploading, we first successfully upload the photo
    and only then store the photo id and hash.

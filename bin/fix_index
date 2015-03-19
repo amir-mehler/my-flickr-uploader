@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+unless RUBY_VERSION.match(/^2\./)
+  puts "Better use ruby 2.*"
+  exit 1
+end
+
 $: << File.expand_path("../../lib",__FILE__)
 
 Dir.chdir(File.expand_path("../../",__FILE__)) do
@@ -11,4 +16,9 @@ require 'uploader'
 # Parse all photos in flickr and check that each photo ID has a DB entry
 # If one doesn't; download it and write it's hash sum to the DB.
 
-Uploader::FingerPrint.fix_em_all!
+begin
+  fp = Uploader::FingerPrint.new
+  fp.fix_em_all!
+ensure
+  fp && fp.close_db
+end

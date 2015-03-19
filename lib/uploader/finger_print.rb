@@ -6,82 +6,114 @@ module Uploader
 
     include Uploader::Helpers
 
-    def self.fix_em_all!
+    API_RETRIES = 3
+    # version 1: 'fp1_dcfe25f0fa9811ef96cbe87c0d85d56e'
+    V1 = /^fp1_\h{32}$/
+
+    def initialize
+      @conf = Uploader::Config.instance
+      @log = @conf.logger
+
+      Uploader::FlickrAuth.authenticate(@conf)
+
+      path = "#{@conf.base_dir}/db/#{@conf.username}.dbk"
+      @db = Daybreak::DB.new(path)
+      @log.debug "db is #{@db}"
+    end
+
+    def close_db
+      @db.close
+    end
+
+    def fix_em_all!
       # Read each picture from flickr
       # # Check if photo id is in DB
       # # Next if found; else
-      # # Check for tags #fp_v1 and #<actual-md5sum>
+      # # Check for tag #fp1_<md5sum>
       # # (Use hash tag) or (download and calc sum, then set the tags)
       # # Update the DB
       # End
 
-      @conf = Uploader::Config.instance
-      log = @conf.logger
-      log.info "Starting to verify and fix all fingerprints"
-      get_photos_retries = 3
+      @log.info "Starting to verify and fix all fingerprints"
 
-      Uploader::FlickrAuth.authenticate(@conf)
-
-      db = @conf.db
-
-      log.info "Getting a list of all photos from flickr"
+      @log.info "Getting a list of all photos from flickr"
       # Get all photos in one list
       page = 1
       pages = flickr.people.getPhotos(user_id: 'me', page: page).pages
       while page <= pages
-        tries = CountDown.new(get_photos_retries)
+        tries = CountDown.new(API_RETRIES)
         begin
           photos_page = flickr.people.getPhotos(user_id: 'me', page: page)
-          # tags = flickr.tags.getListPhoto(photo_id: photos_page[0]["id"])
         rescue => e
           retry unless tries.zero?
           raise e
         end
-        log.info "Got #{photos_page.size} photos. Page #{page}/#{pages}"
-        need_to_index = find_unindexed_photos(photos_page)
-        break
-        # log.info "One tag is: #{tags["tags"][0]["raw"]}" if tags
+        @log.info "downloaded #{photos_page.size} photos index. Page #{page}/#{pages}"
+        find_and_fix_unindexed_photos(photos_page)
         page += 1
+        break if page == 2 # for debug
       end
     end
 
-    def self.find_unindexed_photos(page)
+    def find_and_fix_unindexed_photos(page)
       page.each_entry do |photo|
         id = photo["id"]
-        puts "got: #{id} looking in db"
-        unless @conf.db[photo["id"]] # didn't get photo # TODO check the next 15 lines # TODO make these methods not private
-          # try tags
-          tags = flickr.tags.getListPhoto(photo_id: photos_page[0]["id"])
+        @log.debug "checking photo: #{id} looking in db"
+        unless @db[photo["id"]] && @db[photo["id"]] != '53cb73f74724b36bde1d9f22d3350edb' # didn't get photo # sum for debug
+          tags = flickr.tags.getListPhoto(photo_id: id)
           just_tags = tags['tags'].map { |t| t['raw'] }
-          # version 1: 'fp1_dcfe25f0fa9811ef96cbe87c0d85d56e'
-          v1 = /^fp1_\h{32}$/
-          if hash = just_tags.find { |t| t.match(v1) }
+          # look for a tag with the hash sum of the photo
+          # version 1:
+          if false && hash = just_tags.find { |t| t.match V1 } # false for debug
+            @log.info "photo #{id} was not in DB updating hash now"
             set_hash_and_id(hash.gsub('fp1_',''), id)
-          else
-            # get photo hash sum
+          else # no tag, get photo and calc hash sum
             sizes = flickr.photos.getSizes(photo_id: id)
             original = sizes.find { |s| s["label"] == "Original" }
+            @log.debug "streaming photo into md5: #{original["source"]}"
             hash = uri_to_md5 URI(original["source"])
+            @log.info "photo #{id} was not index yet; got hash: #{hash} adding to db"
             set_hash_and_id(hash, id)
-          end
-          break
-        end
-      end
-
-      def uri_to_md5(uri)
-        # Stream the file into MD5 and return the hexdigest
-        # TODO: 3 tries
-        md5 = Digest::MD5.new
-        Net::HTTP.start(uri.host, uri.port) do |http|
-          request = Net::HTTP::Get.new uri
-          http.request request do |response|
-            response.read_body do |chunk|
-              md5 << chunk
-            end
+            set_tag_v1(hash, id)
           end
         end
-        md5.hexdigest
+        @log.debug "next"
       end
-
     end
+
+    def set_hash_and_id(hash, id)
+      @db.synchronize {
+        @db[hash] = id
+        @db[id] = hash
+        @db.flush
+      }
+    end
+
+    def set_tag_v1(hash, id)
+      @log.info "setting tag on photo fp1_#{hash}"
+      flickr.photos.addTags(photo_id: id, tags: "fp1_#{hash}")
+    end
+
+    # Stream the file into MD5 and return the hexdigest
+    def uri_to_md5(uri)
+      tries = CountDown.new(API_RETRIES)
+      begin
+        md5 = Digest::MD5.new
+        md5.reset
+        pic = "/tmp/pic_#{rand(100)}.png"
+        Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
+          request = Net::HTTP::Get.new uri
+          http.request(request) do |response|
+            response.read_body { |chunk| md5 << chunk }
+          end
+        end
+        @log.debug "got #{md5.hexdigest} pic #{pic}"
+        md5.hexdigest
+      rescue => e
+        retry unless tries.zero?
+        raise e
+      end
+    end
+
   end
+end
