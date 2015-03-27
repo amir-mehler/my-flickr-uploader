@@ -1,13 +1,10 @@
 Work:
 -----
 
-The MD5 is always 53cb73f74724b36bde1d9f22d3350edb
-Bug in the streaming function probably.
-
-
-Run on all photos in flickr.
-think of the local photos cache.
-
+1. run index fix on ALL photos in flickr
+2. start uploading masses of photos
+3. upload the DB to github as long as it's under 50M
+4. clean up the git repo
 
 Wishlist
 --------
