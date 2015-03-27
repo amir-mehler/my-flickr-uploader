@@ -14,24 +14,16 @@ Wishlist
 Params for fix index:
 - ignore existing tags
 - ignore existing DB entries
+Main run point:
+- opt to login with a new user
+- opt to delete cached users
+General:
+- pull/commit DB to git automatically
+- move all initiations to main and use a constructor
+- provide the DB handle from the @conf in main
 
 -------------------
 
-Stream
-------
-def uri_to_md5(uri)
-  md5 = Digest::MD5.new
-  Net::HTTP.start(uri.host, uri.port) do |http|
-    request = Net::HTTP::Get.new uri
-    http.request request do |response|
-      response.read_body do |chunk|
-        md5 << chunk
-        print '.'
-      end
-    end
-  end
-  md5.hexdigest
-end
 
 
 Database

@@ -4,9 +4,14 @@ require 'digest'
 module Uploader
   class FingerPrint
 
+    # To Do
+    # 1. Opt: ignore existing tags (in case they require fixing)
+    # 2. Opt: ignore existing DB entries (in case they require fixing)
+
     include Uploader::Helpers
 
     API_RETRIES = 3
+    KNOWN_ERROR_HASH = '53cb73f74724b36bde1d9f22d3350edb'
     # version 1: 'fp1_dcfe25f0fa9811ef96cbe87c0d85d56e'
     V1 = /^fp1_\h{32}$/
 
@@ -58,26 +63,25 @@ module Uploader
     def find_and_fix_unindexed_photos(page)
       page.each_entry do |photo|
         id = photo["id"]
-        @log.debug "checking photo: #{id} looking in db"
-        unless @db[photo["id"]] && @db[photo["id"]] != '53cb73f74724b36bde1d9f22d3350edb' # didn't get photo # sum for debug
+        @log.debug "checking db for photo id: #{id}"
+        unless @db[photo["id"]] && @db[photo["id"]] != KNOWN_ERROR_HASH # didn't get photo
           tags = flickr.tags.getListPhoto(photo_id: id)
           just_tags = tags['tags'].map { |t| t['raw'] }
           # look for a tag with the hash sum of the photo
           # version 1:
-          if false && hash = just_tags.find { |t| t.match V1 } # false for debug
-            @log.info "photo #{id} was not in DB updating hash now"
+          if hash = just_tags.find { |t| t.match V1 }
+            @log.info "photo #{id} was not in DB; updating now"
             set_hash_and_id(hash.gsub('fp1_',''), id)
           else # no tag, get photo and calc hash sum
             sizes = flickr.photos.getSizes(photo_id: id)
             original = sizes.find { |s| s["label"] == "Original" }
             @log.debug "streaming photo into md5: #{original["source"]}"
             hash = uri_to_md5 URI(original["source"])
-            @log.info "photo #{id} was not index yet; got hash: #{hash} adding to db"
+            @log.info "photo #{id} was not index yet; got hash: #{hash}, adding to db"
             set_hash_and_id(hash, id)
             set_tag_v1(hash, id)
           end
         end
-        @log.debug "next"
       end
     end
 
@@ -90,7 +94,7 @@ module Uploader
     end
 
     def set_tag_v1(hash, id)
-      @log.info "setting tag on photo fp1_#{hash}"
+      @log.info "setting tag: fp1_#{hash} on photo #{id}"
       flickr.photos.addTags(photo_id: id, tags: "fp1_#{hash}")
     end
 
@@ -99,15 +103,12 @@ module Uploader
       tries = CountDown.new(API_RETRIES)
       begin
         md5 = Digest::MD5.new
-        md5.reset
-        pic = "/tmp/pic_#{rand(100)}.png"
         Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
           request = Net::HTTP::Get.new uri
           http.request(request) do |response|
             response.read_body { |chunk| md5 << chunk }
           end
         end
-        @log.debug "got #{md5.hexdigest} pic #{pic}"
         md5.hexdigest
       rescue => e
         retry unless tries.zero?

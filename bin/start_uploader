@@ -13,4 +13,9 @@ end
 
 require 'uploader'
 
-Uploader::Main.run!
+begin
+  up = Uploader::Main.new
+  up.run_uploader!
+ensure
+  up.close
+end
