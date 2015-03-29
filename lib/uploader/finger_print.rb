@@ -27,21 +27,21 @@ module Uploader
     end
 
     def close_db
+      @db.flush
       @db.close
     end
 
     def fix_em_all!
       # Read each picture from flickr
-      # # Check if photo id is in DB
+      # # Check if photo ID is in DB
       # # Next if found; else
       # # Check for tag #fp1_<md5sum>
-      # # (Use hash tag) or (download and calc sum, then set the tags)
+      # # (Use it) or (download and calc sum, then set the tags)
       # # Update the DB
       # End
 
       @log.info "Starting to verify and fix all fingerprints"
-
-      @log.info "Getting a list of all photos from flickr"
+      @log.info "getting a list of all photos from flickr"
       # Get all photos in one list
       page = 1
       pages = flickr.people.getPhotos(user_id: 'me', page: page).pages
@@ -55,8 +55,8 @@ module Uploader
         end
         @log.info "downloaded #{photos_page.size} photos index. Page #{page}/#{pages}"
         find_and_fix_unindexed_photos(photos_page)
+        @db.synchronize { @db.flush } # saves the data after each page
         page += 1
-        break if page == 2 # for debug
       end
     end
 
@@ -65,8 +65,18 @@ module Uploader
         id = photo["id"]
         @log.debug "checking db for photo id: #{id}"
         unless @db[photo["id"]] && @db[photo["id"]] != KNOWN_ERROR_HASH # didn't get photo
-          tags = flickr.tags.getListPhoto(photo_id: id)
-          just_tags = tags['tags'].map { |t| t['raw'] }
+          just_tags = []
+          tries = CountDown.new(API_RETRIES)
+          begin
+            tags = flickr.tags.getListPhoto(photo_id: id)
+            just_tags = tags['tags'].map { |t| t['raw'] }
+          rescue => e
+            @log.debug "api error (tags), retry..."
+            sleep 3
+            retry unless tries.zero?
+            @log.error "failed to get tags from flickr, skipping photo"
+            next
+          end
           # look for a tag with the hash sum of the photo
           # version 1:
           if hash = just_tags.find { |t| t.match V1 }
@@ -89,7 +99,6 @@ module Uploader
       @db.synchronize {
         @db[hash] = id
         @db[id] = hash
-        @db.flush
       }
     end
 

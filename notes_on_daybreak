@@ -1,0 +1,71 @@
+notes_on_daybreak
+
+require 'daybreak'
+
+  db = Daybreak::DB.new "example.db"
+
+  # set the value of a key
+  db['foo'] = 2
+
+  # set the value of a key and flush the change to disk
+  db.set! 'bar', 2
+
+  # You can also use atomic batch updates
+  db.update :alpha => 1, :beta => 2
+  db.update! :alpha => 1, :beta => 2
+
+  # all keys are cast to strings via #to_s
+  db[1] = 2
+  db.keys.include? 1 # => false
+  db.keys.include? '1' # => true
+
+  # ensure changes are sent to disk
+  db.flush
+
+  # open up another db client
+  db2 = Daybreak::DB.new "example2.db"
+  db2['foo'] = 3
+
+  # Ruby objects work too
+  db2['baz'] = {:one => 1}
+  db2.flush
+
+  # Reread the changed file in the first db
+  db.load
+  p db['foo'] #=> 3
+  p db['baz'] #=> {:one => 1}
+
+  # Enumerable works too!
+  1000.times {|i| db[i] = i }
+  p db.reduce(0) {|m, k, v| m + k.last } # => 499500
+
+  # Compaction is always a good idea. It will cut down on the size of the Database
+  db.compact
+  p db['foo'] #=> 1
+  db2.load
+  p db2['foo'] #=> 1
+
+  # DBs can accessed from multiple processes at the same
+  # time. You can use #lock to make an operation atomic.
+  db.lock do
+    db['counter'] += 1
+  end
+
+  # If you want to synchronize only between threads, prefer synchronize over lock!
+  db.synchronize do
+    db['counter'] += 1
+  end
+
+  # DBs can have default values
+  db3 = Daybreak::DB.new "example3.db", :default => 'hello!'
+  db3['bingo'] #=> hello!
+
+  # If you don't like Marshal as serializer, you can write your own
+  # serializer. Inherit Daybreak::Serializer::Default
+  db4 = Daybreak::DB.new "example4.db", :serializer => MyJsonSerializer
+
+  # close the databases
+  db.close
+  db2.close
+  db3.close
+  db4.close

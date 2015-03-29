@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+unless RUBY_VERSION.match(/^2\./)
+  puts "Better use ruby 2.*"
+  exit 1
+end
+
+require 'daybreak'
+
+def is_id?(k)
+  # not a sum and looks like id (not a path)
+  k.match(/^\h{32}$/).nil? && ! k.match(/^\d{10,20}$/).nil?
+end
+
+# Start
+
+begin
+  path = File.expand_path('../../db/naamap.dbk',__FILE__)
+  raise "cant'f find db file: #{path}" unless File.exist? path
+  db = Daybreak::DB.new path
+
+  db.each do |k,v|
+    next if db[v] == k || k.match(/^\//) # match or starts with '/'
+    if is_id?(k) && db[db[v]]
+      print "\nCheck duplicate: #{k} and #{db[db[k]]}
+https://www.flickr.com/photos/119737768@N08/#{k}/
+https://www.flickr.com/photos/119737768@N08/#{db[db[k]]}/"
+    else
+      print "\nKey: #{k} has no mirror pair"
+    end
+  end
+ensure
+  db.close
+end
+
+print "\ndone\n"

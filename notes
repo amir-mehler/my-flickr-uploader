@@ -1,16 +1,23 @@
 Work:
 -----
 
-1. run index fix on ALL photos in flickr
 2. start uploading masses of photos
 3. upload the DB to github as long as it's under 50M
 4. clean up the git repo
+5. duplicates; what if the fix_index finds the same md5sum twice?
+6. duplicates; check all photos in flickr and report duplicates (by tags)
+7. trollop for bin files
+
 
 Wishlist
 --------
 Params for fix index:
 - ignore existing tags
 - ignore existing DB entries
+Remove duplicates (generally we should now be duplicates free, but in case we're not)
+- read all tags from flickr, compare sums and look for duplicates
+- if found, fetch photos and present links (user will delete manually)
+- auto delete option
 Main run point:
 - opt to login with a new user
 - opt to delete cached users
