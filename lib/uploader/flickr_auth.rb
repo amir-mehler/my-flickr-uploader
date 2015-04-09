@@ -3,7 +3,8 @@ require 'flickraw'
 module Uploader
   class FlickrAuth
 
-    def self.verify_api_key(path_to_yaml)
+    def self.verify_api_key(conf)
+      path_to_yaml = conf.conf_file
       creds = YAML.load_file path_to_yaml
       token = flickr.get_request_token
       auth_url = flickr.get_authorize_url(token['oauth_token'], :perms => 'delete')
@@ -14,15 +15,14 @@ module Uploader
       tries = 3
       begin
         login = flickr.test.login
-        creds = {
-          "flickr" => {
-            "api_key"       => creds["flickr"]["api_key"],
-            "shared_secret" => creds["flickr"]["shared_secret"],
-            "access_token"  => flickr.access_token,
-            "access_secret" => flickr.access_secret
-          }
+        creds["flickr"] = {
+          "api_key"       => creds["flickr"]["api_key"],
+          "shared_secret" => creds["flickr"]["shared_secret"],
+          "access_token"  => flickr.access_token,
+          "access_secret" => flickr.access_secret
         }
         File.open(path_to_yaml,'w') { |f| f.write creds.to_yaml }
+        conf.set_username(login.username)
       rescue Net::ReadTimeout => e
         retry unless (tries-=1).zero?
       rescue FlickRaw::FailedResponse => e
@@ -32,24 +32,19 @@ module Uploader
 
     def self.authenticate(conf)
       begin
-        unless File.exists? conf.flickr_creds
-          raise "expected to find conf file here: #{conf.flickr_creds}"
-        end
-
-        creds = YAML.load_file conf.flickr_creds
-
+        creds = conf.flickr_creds
         conf.logger.debug "creds are: #{creds}"
 
-        if creds["flickr"]["api_key"] && creds["flickr"]["shared_secret"]
-          FlickRaw.api_key       = creds["flickr"]["api_key"]
-          FlickRaw.shared_secret = creds["flickr"]["shared_secret"]
+        if creds["api_key"] && creds["shared_secret"]
+          FlickRaw.api_key       = creds["api_key"]
+          FlickRaw.shared_secret = creds["shared_secret"]
         else
           raise "conf file must include api_key and shared_secret"
         end
 
-        if creds["flickr"]["access_token"] && creds["flickr"]["access_secret"]
-          flickr.access_token    = creds["flickr"]["access_token"]
-          flickr.access_secret   = creds["flickr"]["access_secret"]
+        if creds["access_token"] && creds["access_secret"]
+          flickr.access_token    = creds["access_token"]
+          flickr.access_secret   = creds["access_secret"]
           tries = 3
           begin
             login = flickr.test.login
@@ -58,17 +53,16 @@ module Uploader
             retry unless (tries-=1).zero?
           rescue => e
             conf.logger.error "failed to login with cached creds, re-authenticating app"
-            verify_api_key conf.flickr_creds
+            verify_api_key conf
           end
         else
-          puts "debug: got no token..."
-          verify_api_key conf.flickr_creds
+          verify_api_key conf
         end
       rescue => e
         conf.logger.error "Authentication Error: #{e.message}"
         raise e
       end
-      conf.logger.info "Successfully logged in as #{login.username}"
+      conf.logger.info "Successfully logged in as #{conf.username}"
     end
   end
 end

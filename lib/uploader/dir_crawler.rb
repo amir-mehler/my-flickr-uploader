@@ -23,7 +23,7 @@ module Uploader
       @conf = Uploader::Config.instance
       @db   = db
       @q    = queue
-      @dirs = @conf.work_dirs["work_dirs"]
+      @dirs = @conf.work_dirs
       @log  = @conf.logger
       @image_ext = Uploader::Config::IMAGE_EXTENSIONS
     end
@@ -34,33 +34,26 @@ module Uploader
     end
 
     def upload_photo(file, sum, base_dir)
+      while @q.size > (@conf.upload_threads * 2)
+        @log.debug "waiting for uploaders..."
+        sleep 5
+      end
       @q << { file: file, sum: sum, basedir: base_dir }
-      # begin
-      #   path_tags = (path.split('/')[0..-2] - @base_dir.split('/')).join(' ')
-      #   args = {
-      #     title: File.basename(path),
-      #     tags: path_tags,
-      #     is_public: 0,
-      #     is_friend: 0,
-      #     is_family: 1,
-      #     safety_level: 2,
-      #     hidden: 2,
-      #     description: ''
-      #   }
-      #   flickr.upload_photo path, args
-      #   @cache.save sum
-      #   @logger.info "[UPLOADED] #{path}"
-      # rescue => e
-      #   @logger.error "[FAILED] #{path}. #{e.message}. #{e.backtrace}"
-      # end
     end
 
     def run!
-      @dirs.each do |d|
-        raise "Dir path must start at root. '/' char." unless d.match /^\//
-        raise "Dir does not exist! (#{d})" unless File.directory? d
-        d.gsub!(/\/$/,'') if d.length > 2 # remove '/' postfix
-        run_on_dir d, d
+      begin
+        @dirs.each do |d|
+          raise "Dir path must start at root. '/' char." unless d.match /^\//
+          raise "Dir does not exist! (#{d})" unless File.directory? d
+          d.gsub!(/\/$/,'') if d.length > 2 # remove '/' postfix
+          run_on_dir d, d
+        end
+      rescue => e
+        while @q.size > 0
+          @log.info "waiting for current uploads to finish before quiting (^C to stop)"
+          sleep 3
+        end
       end
     end
 

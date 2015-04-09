@@ -5,6 +5,8 @@ unless RUBY_VERSION.match(/^2\./)
   exit 1
 end
 
+raise "implement the user selection thingy"
+
 $: << File.expand_path("../../lib",__FILE__)
 
 Dir.chdir(File.expand_path("../../",__FILE__)) do

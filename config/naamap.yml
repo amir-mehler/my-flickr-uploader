@@ -1,0 +1,12 @@
+---
+flickr:
+  api_key: 6b3bdebf50c0a624eb7ec35c5acf2d8f
+  shared_secret: 4bb9d1f00accca46
+  access_token: 72157650784593627-883b58e8162c1ee0
+  access_secret: c7d8502bca37297f
+__comment_on_flickr_creds__: "when adding a new user, only api_key is needed"
+work_dirs:
+  - "/tmp/base"
+__comment_on_work_dirs__:
+  - "must be full path starting at '/'"
+  - "no importance for '/' at the end"

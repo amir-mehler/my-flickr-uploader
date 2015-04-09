@@ -5,6 +5,21 @@ unless RUBY_VERSION.match(/^2\./)
   exit 1
 end
 
+require 'trollop'
+opts = Trollop::options do
+  banner <<-EOS
+Flickr Uploader!
+
+Usage:
+       start_uploader --user <amir> (file must exist here: config/amir.yml)
+
+EOS
+  opt :user, "Yahoo! user name (without @yahoo.*)", :type => :string, :required => true
+end
+conf_file = File.expand_path("../../config/#{opts[:user]}.yml",__FILE__)
+
+Trollop::die :user, "Missing conf file for user!" unless File.exist? conf_file
+
 $: << File.expand_path("../../lib",__FILE__)
 
 Dir.chdir(File.expand_path("../../",__FILE__)) do
@@ -14,8 +29,8 @@ end
 require 'uploader'
 
 begin
-  up = Uploader::Main.new
+  up = Uploader::Main.new conf_file
   up.run_uploader!
 ensure
-  up.close
+  up && up.close
 end

@@ -7,9 +7,10 @@ module Uploader
 
     include Uploader::Helpers
 
-    def initialize
-      @conf = Uploader::Config.instance
-      Uploader::FlickrAuth.authenticate(@conf)
+    def initialize(conf_file)
+      raise "Can't find conf file!" unless File.exist? conf_file
+      @conf = Uploader::Config.instance conf_file
+      Uploader::FlickrAuth.authenticate @conf
       @db = Daybreak::DB.new @conf.db_path
     end
 
