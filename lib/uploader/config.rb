@@ -8,10 +8,11 @@ module Uploader
     # include Singleton
 
     # Constants
-    IMAGE_EXTENSIONS = %w( jpg jpeg gif bmp png jfif exif tiff tif rif bpg mov mp4 raw)
+    IMAGE_EXTENSIONS = %w(jpg jpeg gif bmp png jfif exif tiff tif rif bpg mov mp4 raw)
 
     attr_reader :image_extensions, :work_dirs, :flickr_creds, :logger
     attr_reader :upload_threads, :username, :base_dir, :db_path, :conf_file
+    attr_accessor :other_dbs
 
     # singleton with parameter
     @@singleton = nil
@@ -43,6 +44,7 @@ module Uploader
       @upload_threads = 15
       @username = '' # will be available after authentication
       @db_path = nil
+      @other_dbs = []
 
       @logger = Logger.new(STDOUT) #@logger = Logger.new(@base_dir + "/log/uploader_log", "daily")
       @logger.datetime_format = '%d-%m-%Y %H:%M:%S'

@@ -12,11 +12,21 @@ module Uploader
       @conf = Uploader::Config.instance conf_file
       Uploader::FlickrAuth.authenticate @conf
       @db = Daybreak::DB.new @conf.db_path
+      @other_dbs = Dir.glob(@conf.base_dir + "/db/*.dbk").inject([]) do |dbs,other_db|
+        dbs << Daybreak::DB.new(other_db) unless other_db == @db
+        dbs
+      end
+      @other_dbs.each { |db| @conf.logger.debug "Found other DB: #{File.basename(db.file)}" }
+      @conf.other_dbs = @other_dbs
     end
 
     def close
       @conf.logger.debug "closing db"
       @db.close
+      @other_dbs.each do |db|
+        db.close
+        @conf.logger.debug "closing other db #{File.basename db.file}"
+      end
     end
 
     def irb

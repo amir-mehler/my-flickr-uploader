@@ -28,6 +28,17 @@ module Uploader
       @image_ext = Uploader::Config::IMAGE_EXTENSIONS
     end
 
+    def find_in_dbs(sum)
+      # check user's db, and all other dbs.
+      id = @db[sum]
+      unless id
+        @conf.other_dbs.find do |db|
+          break if id = db[sum]
+        end
+      end
+      id
+    end
+
     def is_picture?(file)
       m = file.match(/\w+\.(?<ext>\w{3}\w?)$/)
       return m.nil? ? false : @image_ext.include?(m["ext"].downcase)
@@ -81,9 +92,9 @@ module Uploader
           next unless File.file?(file) && is_picture?(file)
           @log.debug "checking out #{File.basename(file)}"
           sum = Digest::MD5.file(file).hexdigest
-          if id = @db[sum]
+          if id = find_in_dbs(sum)
             @log.debug "picture already in db"
-            # Validate id is in flickr? (should be an option)
+            # Validate id is in flickr? (should be an option, but means you can't just delete from flickr)
             next
           else
             upload_photo(file, sum, base_dir)
