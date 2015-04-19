@@ -1,62 +1,52 @@
 require 'flickraw'
+require 'yaml'
 
 module Uploader
   class FlickrAuth
 
-    def self.verify_api_key(conf)
-      path_to_yaml = conf.conf_file
-      creds = YAML.load_file path_to_yaml
-      token = flickr.get_request_token
-      auth_url = flickr.get_authorize_url(token['oauth_token'], :perms => 'delete')
-      puts "Open this url in your process to complete the authication process : #{auth_url}"
-      puts "Paste here the number given when you complete the process."
-      verify = gets.strip
-      flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
-      tries = 3
-      begin
-        login = flickr.test.login
-        creds["flickr"] = {
-          "api_key"       => creds["flickr"]["api_key"],
-          "shared_secret" => creds["flickr"]["shared_secret"],
-          "access_token"  => flickr.access_token,
-          "access_secret" => flickr.access_secret
-        }
-        File.open(path_to_yaml,'w') { |f| f.write creds.to_yaml }
-        conf.set_username(login.username)
-      rescue Net::ReadTimeout => e
-        retry unless (tries-=1).zero?
-      rescue FlickRaw::FailedResponse => e
-        raise "authentication failed : #{e.msg}"
-      end
-    end
+    include Uploader::Helpers
+
+    LOGIN_TRIES = 3
 
     def self.authenticate(conf)
       begin
         creds = conf.flickr_creds
         conf.logger.debug "creds are: #{creds}"
 
-        if creds["api_key"] && creds["shared_secret"]
-          FlickRaw.api_key       = creds["api_key"]
-          FlickRaw.shared_secret = creds["shared_secret"]
+        # API creds (for this app, regardless of user)
+        if creds["key"] && creds["secret"]
+          conf.logger.debug "Using API creds #{creds["key"]} #{creds["secret"]}"
+          FlickRaw.api_key       = creds["key"]
+          FlickRaw.shared_secret = creds["secret"]
         else
-          raise "conf file must include api_key and shared_secret"
+          raise "Error! 'secret/api_key.yml' must include { 'api-key': { 'key': 'kkk...', 'secret': 'sss...' } }"
         end
 
-        if creds["access_token"] && creds["access_secret"]
-          flickr.access_token    = creds["access_token"]
-          flickr.access_secret   = creds["access_secret"]
-          tries = 3
+        # User creds, we cache these for every user on first use.
+        if File.exist? conf.user_creds_path
+          user_creds = YAML.load_file(conf.user_creds_path)["flickr"]
+          conf.logger.debug "These are the creds from the file: #{user_creds}"
+          unless user_creds["access_token"] && user_creds["access_secret"]
+            raise "Error! bad secret user file, better delete it and reauthorize (#{conf.user_creds_path})"
+          end
+          flickr.access_token  = user_creds["access_token"]
+          flickr.access_secret = user_creds["access_secret"]
+          tries = CountDown.new(LOGIN_TRIES)
           begin
             login = flickr.test.login
-            conf.set_username(login.username)
-          rescue Net::ReadTimeout => e
-            retry unless (tries-=1).zero?
+            unless login.username == conf.username
+              raise "Error! got login username: #{login.username} but you provided: #{username}. Please try again with the first one: [#{login.username}] (creds are already cached)"
+            end
           rescue => e
-            conf.logger.error "failed to login with cached creds, re-authenticating app"
-            verify_api_key conf
+            if e.class == Net::ReadTimeout
+              retry unless tries.zero?
+            end
+            puts "#{e.message}. Failed to login with cached creds, re-authenticating app #{user_creds["access_token"]} #{user_creds["access_secret"]}"
+            verify_api_key conf.username, conf.user_creds_path
           end
         else
-          verify_api_key conf
+          # No cached creds, authenticate, login and cache
+          verify_api_key conf.username, conf.user_creds_path
         end
       rescue => e
         conf.logger.error "Authentication Error: #{e.message}"
@@ -64,5 +54,38 @@ module Uploader
       end
       conf.logger.info "Successfully logged in as #{conf.username}"
     end
+
+    def self.verify_api_key(username, user_creds_path)
+      creds = {}
+      token = flickr.get_request_token
+      auth_url = flickr.get_authorize_url(token['oauth_token'], :perms => 'delete')
+      puts "====================================================================="
+      puts "Open this url in your browser to complete the authentication process:"
+      puts "#{auth_url}"
+      puts "====================================================================="
+      puts "Paste here the number given when you complete the process:"
+      verify = gets.strip
+      puts "Got it. Attempting login..."
+      tries = CountDown.new(LOGIN_TRIES)
+      begin
+        flickr.get_access_token(token['oauth_token'], token['oauth_token_secret'], verify)
+        login = flickr.test.login
+        creds["flickr"] = {
+          "access_token"  => flickr.access_token,
+          "access_secret" => flickr.access_secret
+        }
+        File.open(user_creds_path,'w') { |f| f.write creds.to_yaml }
+        # validate user name (we first cache the access token, so we won't have to repeat this)
+        unless login.username == username
+          raise "Error! got login username: #{login.username} but you provided: #{username}. Please try again with the first one: [#{login.username}] (creds are already cached)"
+        end
+      rescue Net::ReadTimeout => e
+        retry unless tries.zero?
+        raise "failed to login! (make sure you pasted the code as is)"
+      rescue FlickRaw::FailedResponse => e
+        raise "authentication failed : #{e.msg}"
+      end
+    end
+
   end
 end

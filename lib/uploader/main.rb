@@ -7,11 +7,10 @@ module Uploader
 
     include Uploader::Helpers
 
-    def initialize(conf_file)
-      raise "Can't find conf file!" unless File.exist? conf_file
-      @conf = Uploader::Config.instance conf_file
+    def initialize(user)
+      @conf = Uploader::Config.instance user
       Uploader::FlickrAuth.authenticate @conf
-      @db = Daybreak::DB.new @conf.db_path
+      @db = Daybreak::DB.new @conf.db_path # HERE !!!
       @other_dbs = Dir.glob(@conf.base_dir + "/db/*.dbk").inject([]) do |dbs,other_db|
         dbs << Daybreak::DB.new(other_db) unless other_db == @db
         dbs
@@ -42,15 +41,15 @@ module Uploader
 
     def run_uploader!
 
-      # write dir disk crawler (use dir mod time and store in db)
-      # make sure the uploaders tag the photos
-
       log = @conf.logger
       log.info "Starting the uploader"
       log.debug "DB: #{@db}"
       log.debug "User: #{@conf.username}"
 
       queue = Queue.new
+
+      # TODO HERE !!
+      # handle: "Net::ReadTimeout" withing the threads
 
       file_uploaders = @conf.upload_threads.times.map do
         log.info "lunching thread"

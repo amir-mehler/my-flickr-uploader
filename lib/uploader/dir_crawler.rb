@@ -1,6 +1,8 @@
 require 'digest'
 
 module Uploader
+  # Recurse through the file system, find new photos/videos, add them to upload queue.
+  # Translate non-english to english
   class DirCrawler
 
     # To Do
@@ -70,7 +72,8 @@ module Uploader
 
     def run_on_dir(dir, base_dir)
       check_files = true
-      # Check if the dir was modified since the last time we saw it
+
+      ## Check if the dir was modified since the last time we saw it
       curr_mtime = File.stat(dir).mtime.to_i
       if last_read = @db[dir]
         # we saw it before, let's see if it changed
@@ -83,14 +86,15 @@ module Uploader
           @log.info("skipping dir: #{dir} since it wasn't changed since the last run")
         end
       end
-      # We first scan all files in current dir, mark it done, and then descend deeper
+
+      ## We first scan all *files* in current dir, mark it done, and then descend deeper
       if check_files
         # We always reset the marker when we start a scan
         @log.info("crawling through dir: #{dir}")
         @db[dir] = { 'last_modification' => curr_mtime, 'last_successfull_scan' => 'never' }
         Dir.glob(dir + "/*").each do |file|
           next unless File.file?(file) && is_picture?(file)
-          @log.debug "checking out #{File.basename(file)}"
+          @log.info "checking out #{File.basename(file)}"
           sum = Digest::MD5.file(file).hexdigest
           if id = find_in_dbs(sum)
             @log.debug "picture already in db"
@@ -103,7 +107,8 @@ module Uploader
         @db[dir] = { 'last_modification' => curr_mtime, 'last_successfull_scan' => Time.now.to_i }
         @log.info("finished with files in dir #{dir}")
       end
-      # after the files, we descend deeper into directories
+
+      ## after the files, we descend deeper into *directories*
       Dir.glob(dir + "/*").each do |sub_dir|
         run_on_dir(sub_dir, base_dir) if File.directory? sub_dir
       end

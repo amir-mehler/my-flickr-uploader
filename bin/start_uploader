@@ -1,7 +1,15 @@
 #!/usr/bin/env ruby
 
+## prerequisits
+# 1. Ruby 2.*
 unless RUBY_VERSION.match(/^2\./)
   puts "Better use ruby 2.*"
+  exit 1
+end
+
+# 2. Google Translate gem
+unless `t --version`.match(/Google Translate/)
+  puts "Google Translate Ruby Gem is not installed and available"
   exit 1
 end
 
@@ -11,14 +19,14 @@ opts = Trollop::options do
 Flickr Uploader!
 
 Usage:
-       start_uploader --user <amir> (file must exist here: config/amir.yml)
+       start_uploader --user <name> (work dirs file must exist here: config/<name>.yml)
 
 EOS
   opt :user, "Yahoo! user name (without @yahoo.*)", :type => :string, :required => true
 end
-conf_file = File.expand_path("../../config/#{opts[:user]}.yml",__FILE__)
 
-Trollop::die :user, "Missing conf file for user!" unless File.exist? conf_file
+# conf_file = File.expand_path("../../config/#{opts[:user]}.yml",__FILE__)
+# Trollop::die :user, "Missing conf file for user!" unless File.exist? conf_file
 
 $: << File.expand_path("../../lib",__FILE__)
 
@@ -29,7 +37,7 @@ end
 require 'uploader'
 
 begin
-  up = Uploader::Main.new conf_file
+  up = Uploader::Main.new opts[:user]
   up.run_uploader!
 ensure
   up && up.close

@@ -5,45 +5,39 @@ require 'daybreak'
 
 module Uploader
   class Config
-    # include Singleton
 
     # Constants
     IMAGE_EXTENSIONS = %w(jpg jpeg gif bmp png jfif exif tiff tif rif bpg mov mp4 raw)
 
     attr_reader :image_extensions, :work_dirs, :flickr_creds, :logger
     attr_reader :upload_threads, :username, :base_dir, :db_path, :conf_file
-    attr_accessor :other_dbs
+    attr_accessor :other_dbs, :user_creds_path
 
-    # singleton with parameter
+    # Singleton with parameter
     @@singleton = nil
     @@mutex = Mutex.new
 
-    def self.instance(conf_file=nil)
-      # return @@singleton if @@singleton
+    def self.instance(user=nil)
       @@mutex.synchronize {
         return @@singleton if @@singleton
-        @@singleton = new(conf_file)
+        @@singleton = new(user)
       }
       @@singleton
     end
 
-    def set_username(n)
-      @username.empty? && @username = n
-      @db_path ||= "#{@base_dir}/db/#{@username}.dbk"
-    end
-
     private
 
-    def initialize(conf_file)
-      @conf_file = conf_file
-      @base_dir = File.expand_path("../../../", __FILE__)
-      @user_conf = YAML.load_file(@conf_file)
-      @work_dirs = @user_conf["work_dirs"]
-      @flickr_creds = @user_conf["flickr"]
+    def initialize(user)
+      @username = user
+      @base_dir  = File.expand_path("../../../", __FILE__)
+      @user_creds_path = @base_dir + "/secret/#{user}.yml"
+      @work_dirs = YAML.load_file(@base_dir + "/config/#{user}.yml")["work_dirs"]
+      @flickr_creds = YAML.load_file(@base_dir + "/secret/api_key.yml")["api-key"]
+
       @image_extensions = IMAGE_EXTENSIONS
       @upload_threads = 15
-      @username = '' # will be available after authentication
-      @db_path = nil
+
+      @db_path = "#{@base_dir}/db/#{@username}.dbk"
       @other_dbs = []
 
       @logger = Logger.new(STDOUT) #@logger = Logger.new(@base_dir + "/log/uploader_log", "daily")

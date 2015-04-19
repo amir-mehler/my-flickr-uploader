@@ -1,12 +1,18 @@
 module Uploader
   class FileUploader
 
+    include Uploader::Helpers
+
+    UPLOAD_TRIES = 5
+    TIMEOUT_MSG = "upload_timeout"
+
     def initialize(queue, db, log)
       @q   = queue
       @db  = db
       @log = log
     end
 
+    # Pop from queue, try to upload to Flickr. That's it.
     def run!
       @log.info "uploder thread started! (#{Thread.current.object_id})"
       begin
@@ -14,20 +20,25 @@ module Uploader
           @log.debug "starting upload of #{File.basename(i[:file])} #{i[:sum]}"
           upload i[:file], i[:sum], i[:basedir]
         end
+        @log.info "uploader thread done! (#{Thread.current.object_id})"
       rescue => e
-        @log.error "Thread finished with exception: #{e.message}"
         @db.synchronize { @db.flush }
-        raise e
+        if (e.class == ThreadError) && (e.message == TIMEOUT_MSG)
+          @log.error "upload timeouts. this thread will die now (#{Thread.current.object_id})"
+        else
+          @log.error "thread finished with exception: #{e.message} (#{Thread.current.object_id})"
+        end
       end
-      sleep rand(10) # for debug
-      @log.info "uploader thread done! (#{Thread.current.object_id})"
     end
 
     def upload(file, sum, base_dir)
       id = 'error' # so we could dig out errors in the db
+      tries = CountDown.new(UPLOAD_TRIES)
       begin
-        # this extracts all of the dir names above base_dir
-        path_tags = (File.dirname(file).split('/') - base_dir.split('/')).join(' ')
+        # this extracts all of the dir names above base_dir and translates to english
+        path_tags = (File.dirname(file).split('/') - base_dir.split('/')).map { |str|
+                      Uploader::Helpers.translate str
+                    }.join(' ')
         tags = path_tags + " fp1_#{sum}" # mind the spaces
         args = {
           title: File.basename(file),
@@ -41,6 +52,10 @@ module Uploader
         }
         id = flickr.upload_photo file, args
         @log.info "[UPLOADED] name: #{file}, id: #{id}"
+      rescue Net::ReadTimeout => e
+        @log.error "upload timeout (retrying)"
+        retry unless tries.zero?
+        raise ThreadError, TIMEOUT_MSG
       rescue => e
         @log.error "[FAILED upload] #{file}. #{e.message}."
         raise e
