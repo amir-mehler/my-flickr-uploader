@@ -37,27 +37,30 @@ module Uploader
       begin
         # this extracts all of the dir names above base_dir and translates to english
         path_tags = (File.dirname(file).split('/') - base_dir.split('/')).map { |str|
-                      Uploader::Helpers.translate str
+                      @log # HERE
+                      translate str
                     }.join(' ')
         tags = path_tags + " fp1_#{sum}" # mind the spaces
+        title = translate(File.basename(file))
         args = {
-          title: File.basename(file),
+          title: title,
           tags: tags,
           is_public: 0,
           is_friend: 0,
           is_family: 1,
-          safety_level: 2,
+          safety_level: 1, # 1 for Safe, 2 for Moderate, and 3 for Restricted
           hidden: 2,
           description: ''
         }
         id = flickr.upload_photo file, args
-        @log.info "[UPLOADED] name: #{file}, id: #{id}"
+        @log.info "[UPLOADED] name: #{title}, id: #{id}"
       rescue Net::ReadTimeout => e
         @log.error "upload timeout (retrying)"
         retry unless tries.zero?
         raise ThreadError, TIMEOUT_MSG
       rescue => e
-        @log.error "[FAILED upload] #{file}. #{e.message}."
+        @log.error "[FAILED upload] #{file}. Message: #{e.message}. Class: #{e.class}"
+        @log.error e.backtrace.join("\n")
         raise e
       end
       # only if upload was ok we update the db

@@ -21,13 +21,15 @@ module Uploader
     # This will allow us to keep track of deleted dirs and remove thier markers from the DB
     # Opt: validate that each photo found in DB is really in flickr with matching ID and hash tag
 
-    def initialize(db, queue)
+    def initialize(db, queue, uploaders)
       @conf = Uploader::Config.instance
       @db   = db
       @q    = queue
       @dirs = @conf.work_dirs
       @log  = @conf.logger
       @image_ext = Uploader::Config::IMAGE_EXTENSIONS
+      @skip_dirs = @conf.skip_dirs
+      @uploaders = uploaders
     end
 
     def find_in_dbs(sum)
@@ -46,9 +48,16 @@ module Uploader
       return m.nil? ? false : @image_ext.include?(m["ext"].downcase)
     end
 
+    def file_uploaders_alive?
+      @uploaders.any? { |t| t.status }
+    end
+
     def upload_photo(file, sum, base_dir)
+      silence = 0
       while @q.size > (@conf.upload_threads * 2)
-        @log.debug "waiting for uploaders..."
+        @log.debug "waiting for uploaders..." if silence.zero?
+        silence = silence > 10 ? 0 : silence + 1
+        raise "No uploaders. Aborting crawler" unless file_uploaders_alive?
         sleep 5
       end
       @q << { file: file, sum: sum, basedir: base_dir }
@@ -56,13 +65,18 @@ module Uploader
 
     def run!
       begin
+        @log.debug "running crawler! (dirs: #{@dirs})"
         @dirs.each do |d|
           raise "Dir path must start at root. '/' char." unless d.match /^\//
-          raise "Dir does not exist! (#{d})" unless File.directory? d
+          unless File.directory? d
+            @log.warn "Can't find directory #{d}, next"
+            next
+          end
           d.gsub!(/\/$/,'') if d.length > 2 # remove '/' postfix
           run_on_dir d, d
         end
       rescue => e
+        @log.error "crawler ended with #{e.message} #{e.class}"
         while @q.size > 0
           @log.info "waiting for current uploads to finish before quiting (^C to stop)"
           sleep 3
@@ -72,6 +86,11 @@ module Uploader
 
     def run_on_dir(dir, base_dir)
       check_files = true
+      ## Check if the dir is in 'skip_dirs' conf
+      if @skip_dirs.any? { |d| "#{base_dir}/#{d}" == dir }
+        @log.info "Skipping dir according to conf"
+        return
+      end
 
       ## Check if the dir was modified since the last time we saw it
       curr_mtime = File.stat(dir).mtime.to_i

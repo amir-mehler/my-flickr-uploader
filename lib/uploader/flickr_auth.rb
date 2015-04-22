@@ -48,6 +48,9 @@ module Uploader
           # No cached creds, authenticate, login and cache
           verify_api_key conf.username, conf.user_creds_path
         end
+      rescue SocketError => e
+        conf.logger.error "Failed to authenticate - check network connection"
+        exit 1
       rescue => e
         conf.logger.error "Authentication Error: #{e.message}"
         raise e

@@ -9,22 +9,45 @@ module Uploader
 
     def initialize(user)
       @conf = Uploader::Config.instance user
+      @log = @conf.logger
       Uploader::FlickrAuth.authenticate @conf
       @db = Daybreak::DB.new @conf.db_path # HERE !!!
       @other_dbs = Dir.glob(@conf.base_dir + "/db/*.dbk").inject([]) do |dbs,other_db|
         dbs << Daybreak::DB.new(other_db) unless other_db == @db
         dbs
       end
-      @other_dbs.each { |db| @conf.logger.debug "Found other DB: #{File.basename(db.file)}" }
+      @other_dbs.each { |db| @log.debug "Found other DB: #{File.basename(db.file)}" }
       @conf.other_dbs = @other_dbs
+      @file_uploaders = []
+      @upload_queue = Queue.new
     end
 
     def close
-      @conf.logger.debug "closing db"
+      @log.debug "waiting for threads to finish up"
+      gracefully_close_threads
+
+      @log.debug "closing dbs"
       @db.close
       @other_dbs.each do |db|
         db.close
-        @conf.logger.debug "closing other db #{File.basename db.file}"
+        @log.debug "closing other db #{File.basename db.file}"
+      end
+    end
+
+    def gracefully_close_threads
+      @conf.upload_threads.times { @upload_queue << nil } # next round will kill each thread during q.pop
+
+      sleep 1
+
+      @log.info "making sure all threads are done"
+
+      @file_uploaders.each do |t|
+        if t.status == false
+          @log.info "thread #{t.object_id} finished"
+        else
+          @log.info "thread #{t.object_id} is not finished, waiting..."
+          t.join
+        end
       end
     end
 
@@ -40,50 +63,28 @@ module Uploader
     end
 
     def run_uploader!
+      @log.info "Starting the uploader"
+      @log.debug "DB: #{@db}"
+      @log.debug "User: #{@conf.username}"
 
-      log = @conf.logger
-      log.info "Starting the uploader"
-      log.debug "DB: #{@db}"
-      log.debug "User: #{@conf.username}"
-
-      queue = Queue.new
-
-      # TODO HERE !!
-      # handle: "Net::ReadTimeout" withing the threads
-
-      file_uploaders = @conf.upload_threads.times.map do
-        log.info "lunching thread"
-        Thread.new { Uploader::FileUploader.new(queue, @db, log).run! }
+      @file_uploaders = @conf.upload_threads.times.map do
+        @log.info "lunching thread"
+        Thread.new { Uploader::FileUploader.new(@upload_queue, @db, @log).run! }
       end
 
-      Uploader::DirCrawler.new(@db, queue).run!
+      Uploader::DirCrawler.new(@db, @upload_queue, @file_uploaders).run! # todo: this should also be a thread we can gracefully stop
 
       sleep 1
-      log.info "crawler finished, all upload in queue"
+      @log.info "crawler finished"
 
-      while queue.size > 0 do
+      while @upload_queue.size > 0 do
         sleep 5
-        @log.info "#{queue.size} photos pending upload..."
+        @log.info "#{@upload_queue.size} photos pending upload..."
       end
 
-      @conf.upload_threads.times do
-        queue << nil # next round will kill each thread during q.pop
-      end
+      gracefully_close_threads
 
-      sleep 1
-
-      log.info "making sure all threads are done"
-
-      file_uploaders.each do |t|
-        if t.status == false
-          log.info "thread #{t.object_id} finished"
-        else
-          log.info "thread #{t.object_id} is not finished, waiting..."
-          t.join
-        end
-      end
-
-      log.info "-- fin --"
+      @log.info "-- fin --"
     end
   end
 end

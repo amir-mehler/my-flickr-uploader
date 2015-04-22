@@ -39,6 +39,8 @@ require 'uploader'
 begin
   up = Uploader::Main.new opts[:user]
   up.run_uploader!
+rescue SystemExit, Interrupt
+  puts "caught exit/interrupt"
 ensure
   up && up.close
 end

@@ -1,8 +1,8 @@
 Work:
 -----
 
-2. start uploading masses of photos
-3. upload the DB to github as long as it's under 50M
+1. think of 'smart start'. will pull from git if need to, push if opposite. will update all indexes from flickr to db, will be able to build entire DB if missing. Will be a single entry point to the appliaction.
+
 5. duplicates; what if the fix_index finds the same md5sum twice?
 6. duplicates; check all photos in flickr and report duplicates (by tags)
 7. trollop for bin files
