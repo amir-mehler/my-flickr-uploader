@@ -87,7 +87,7 @@ module Uploader
     def run_on_dir(dir, base_dir)
       check_files = true
       ## Check if the dir is in 'skip_dirs' conf
-      if @skip_dirs.any? { |d| "#{base_dir}/#{d}" == dir }
+      if @skip_dirs && @skip_dirs.any? { |d| "#{base_dir}/#{d}" == dir }
         @log.info "Skipping dir according to conf"
         return
       end

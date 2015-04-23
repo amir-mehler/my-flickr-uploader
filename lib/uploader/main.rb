@@ -13,7 +13,7 @@ module Uploader
       Uploader::FlickrAuth.authenticate @conf
       @db = Daybreak::DB.new @conf.db_path # HERE !!!
       @other_dbs = Dir.glob(@conf.base_dir + "/db/*.dbk").inject([]) do |dbs,other_db|
-        dbs << Daybreak::DB.new(other_db) unless other_db == @db
+        dbs << Daybreak::DB.new(other_db) unless other_db == @conf.db_path
         dbs
       end
       @other_dbs.each { |db| @log.debug "Found other DB: #{File.basename(db.file)}" }
@@ -71,6 +71,8 @@ module Uploader
         @log.info "lunching thread"
         Thread.new { Uploader::FileUploader.new(@upload_queue, @db, @log).run! }
       end
+
+      @log.debug "file uploaders is: #{@file_uploaders}"
 
       Uploader::DirCrawler.new(@db, @upload_queue, @file_uploaders).run! # todo: this should also be a thread we can gracefully stop
 

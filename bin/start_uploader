@@ -25,9 +25,6 @@ EOS
   opt :user, "Yahoo! user name (without @yahoo.*)", :type => :string, :required => true
 end
 
-# conf_file = File.expand_path("../../config/#{opts[:user]}.yml",__FILE__)
-# Trollop::die :user, "Missing conf file for user!" unless File.exist? conf_file
-
 $: << File.expand_path("../../lib",__FILE__)
 
 Dir.chdir(File.expand_path("../../",__FILE__)) do
