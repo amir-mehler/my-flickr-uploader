@@ -1,0 +1,6 @@
+work_dirs:
+  - "/mnt/Pictures"
+  - "/mnt/F_DRIVE"
+__comment__:
+  - "must be full path starting at '/'"
+  - "no importance for '/' at the end"

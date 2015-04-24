@@ -21,6 +21,9 @@ module Uploader
     # This will allow us to keep track of deleted dirs and remove thier markers from the DB
     # Opt: validate that each photo found in DB is really in flickr with matching ID and hash tag
 
+    UPLOAD_WAIT = 5 # seconds
+    UPLOAD_TIMEOUT = 600 # seconds  
+
     def initialize(db, queue, uploaders)
       @conf = Uploader::Config.instance
       @db   = db
@@ -30,6 +33,7 @@ module Uploader
       @image_ext = Uploader::Config::IMAGE_EXTENSIONS
       @skip_dirs = @conf.skip_dirs
       @uploaders = uploaders
+      @wait_count = 0 # don't tell me you are waiting every second
     end
 
     def find_in_dbs(sum)
@@ -49,16 +53,19 @@ module Uploader
     end
 
     def file_uploaders_alive?
-      @uploaders.any? { |t| t.status }
+      @uploaders.each do |t|
+        return true if t.status.class != FalseClass
+      end
+      false
     end
 
     def upload_photo(file, sum, base_dir)
-      silence = 0
       while @q.size > (@conf.upload_threads * 2)
-        @log.debug "waiting for uploaders..." if silence.zero?
-        silence = silence > 10 ? 0 : silence + 1
-        raise "No uploaders. Aborting crawler" unless file_uploaders_alive?
-        sleep 5
+        @log.debug "waiting for uploaders..." if (@wait_count % 10).zero?
+        @wait_count += 1
+        raise "no uploaders - aborting crawler" unless file_uploaders_alive?
+        raise "this is taking too long. Aborting" if @wait_count > (UPLOAD_TIMEOUT/UPLOAD_WAIT)
+        sleep UPLOAD_WAIT
       end
       @q << { file: file, sum: sum, basedir: base_dir }
     end
@@ -76,8 +83,8 @@ module Uploader
           run_on_dir d, d
         end
       rescue => e
-        @log.error "crawler ended with #{e.message} #{e.class}"
-        while @q.size > 0
+        @log.error "crawler ended with: #{e.message} #{e.class}"
+        while @q.size > 0 && file_uploaders_alive?
           @log.info "waiting for current uploads to finish before quiting (^C to stop)"
           sleep 3
         end

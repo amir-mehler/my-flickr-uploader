@@ -36,14 +36,19 @@ module Uploader
       @flickr_creds = YAML.load_file(@base_dir + "/secret/api_key.yml")["api-key"]
 
       @image_extensions = IMAGE_EXTENSIONS
-      @upload_threads = 15
+      @upload_threads = 5
 
       @db_path = "#{@base_dir}/db/#{@username}.dbk"
       @other_dbs = []
 
-      @logger = Logger.new(STDOUT) #@logger = Logger.new(@base_dir + "/log/uploader_log", "daily")
+      log_file = File.open(@base_dir + "/log/uploader_log", 'a')
+#      @logger = Logger.new Uploader::MultiIO.new(STDOUT, log_file), "daily"
+      @logger = Logger.new STDOUT
       @logger.datetime_format = '%d-%m-%Y %H:%M:%S'
       @logger.level = Logger::DEBUG
+
+      # delete old temp files
+      File.delete "/tmp/temp_file.*" unless Dir.glob("/tmp/temp_file.*").empty?
 
       @logger.info "<<< initialized config instance >>>"
     end

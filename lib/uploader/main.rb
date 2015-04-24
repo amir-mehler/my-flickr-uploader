@@ -23,7 +23,6 @@ module Uploader
     end
 
     def close
-      @log.debug "waiting for threads to finish up"
       gracefully_close_threads
 
       @log.debug "closing dbs"
@@ -64,8 +63,6 @@ module Uploader
 
     def run_uploader!
       @log.info "Starting the uploader"
-      @log.debug "DB: #{@db}"
-      @log.debug "User: #{@conf.username}"
 
       @file_uploaders = @conf.upload_threads.times.map do
         @log.info "lunching thread"
@@ -75,18 +72,8 @@ module Uploader
       @log.debug "file uploaders is: #{@file_uploaders}"
 
       Uploader::DirCrawler.new(@db, @upload_queue, @file_uploaders).run! # todo: this should also be a thread we can gracefully stop
-
-      sleep 1
-      @log.info "crawler finished"
-
-      while @upload_queue.size > 0 do
-        sleep 5
-        @log.info "#{@upload_queue.size} photos pending upload..."
-      end
-
-      gracefully_close_threads
-
-      @log.info "-- fin --"
+      
+      # at this point we are done, but you need to call 'close' to really wrap things up
     end
   end
 end

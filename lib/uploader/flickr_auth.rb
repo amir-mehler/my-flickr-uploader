@@ -11,11 +11,11 @@ module Uploader
     def self.authenticate(conf)
       begin
         creds = conf.flickr_creds
-        conf.logger.debug "creds are: #{creds}"
+        # conf.logger.debug "creds are: #{creds}"
 
         # API creds (for this app, regardless of user)
         if creds["key"] && creds["secret"]
-          conf.logger.debug "Using API creds #{creds["key"]} #{creds["secret"]}"
+          # conf.logger.debug "Using API creds #{creds["key"]} #{creds["secret"]}"
           FlickRaw.api_key       = creds["key"]
           FlickRaw.shared_secret = creds["secret"]
         else
@@ -25,7 +25,7 @@ module Uploader
         # User creds, we cache these for every user on first use.
         if File.exist? conf.user_creds_path
           user_creds = YAML.load_file(conf.user_creds_path)["flickr"]
-          conf.logger.debug "These are the creds from the file: #{user_creds}"
+          # conf.logger.debug "These are the creds from the file: #{user_creds}"
           unless user_creds["access_token"] && user_creds["access_secret"]
             raise "Error! bad secret user file, better delete it and reauthorize (#{conf.user_creds_path})"
           end

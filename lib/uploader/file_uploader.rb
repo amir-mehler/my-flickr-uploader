@@ -10,6 +10,7 @@ module Uploader
       @q   = queue
       @db  = db
       @log = log
+      @temp_file = "/tmp/temp_file.#{Thread.current.object_id}"
     end
 
     # Pop from queue, try to upload to Flickr. That's it.
@@ -37,8 +38,7 @@ module Uploader
       begin
         # this extracts all of the dir names above base_dir and translates to english
         path_tags = (File.dirname(file).split('/') - base_dir.split('/')).map { |str|
-                      @log # HERE
-                      translate str
+                      trn = translate str
                     }.join(' ')
         tags = path_tags + " fp1_#{sum}" # mind the spaces
         title = translate(File.basename(file))
@@ -52,8 +52,15 @@ module Uploader
           hidden: 2,
           description: ''
         }
+        @log.debug "start actual upload with args: #{args}"
         id = flickr.upload_photo file, args
         @log.info "[UPLOADED] name: #{title}, id: #{id}"
+      rescue Encoding::UndefinedConversionError => e
+        # upload file under alias name
+        File.delete(@temp_file) if File.exist? @temp_file
+        File.symlink file, @temp_file
+        id = flickr.upload_photo @temp_file, args
+        @log.info "[UPLOADED symlink] name: #{title}, id: #{id}"
       rescue Net::ReadTimeout => e
         @log.error "upload timeout (retrying)"
         retry unless tries.zero?

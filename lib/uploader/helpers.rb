@@ -4,21 +4,17 @@ module Uploader
     # return english strings (as much as possible)
     def translate(str)
       begin
-        # encode utf-8 and prevent bash injection
-        utf = str.force_encoding("UTF-8").tr('";$&`|()','')
-        unless utf.ascii_only?
-          `t en '#{utf}' | sed 's/^Translation: //;s/ /_/g'`.chop.force_encoding("UTF-8")
-        else
-          utf
-        end
+        clean = str.tr('";$&`|()','') # clean special chars
+        eng = clean.ascii_only? ? clean : `t en '#{clean}' | sed 's/^Translation: //;s/ /_/g'`.chop # translate non english
+        # eng.encode('UTF-8', 'ASCII-8BIT', invalid: :replace, undef: :replace, replace: '') # really force encoding
       rescue => e
         raise "Failed to translate #{str} got (#{e.class}) #{e.message}. #{e.backtrace.join("\n")}"
       end
     end
 
-    def remove_bash_special_chars(str)
-      str.tr('";$`|( ','')
-    end
+#    def remove_bash_special_chars(str)
+#      str.tr('";$`|( ','')
+#    end
 
   # $ `t en HE-STR` # => "Translation: EN-STR"
 
