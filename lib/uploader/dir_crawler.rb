@@ -22,7 +22,7 @@ module Uploader
     # Opt: validate that each photo found in DB is really in flickr with matching ID and hash tag
 
     UPLOAD_WAIT = 5 # seconds
-    UPLOAD_TIMEOUT = 600 # seconds  
+    UPLOAD_TIMEOUT = 600 # seconds
 
     def initialize(db, queue, uploaders)
       @conf = Uploader::Config.instance
@@ -68,6 +68,7 @@ module Uploader
         sleep UPLOAD_WAIT
       end
       @q << { file: file, sum: sum, basedir: base_dir }
+      @wait_count = 0
     end
 
     def run!

@@ -1,0 +1,9 @@
+work_dirs:
+  - "/Users/amir/Pictures/iris_and_ariel_wedding"
+  - "/Volumes/Elements/PHOTOS"
+skip_dirs:
+  - "Mehler - old scans/wedding"
+__comment__:
+  - "must be full path starting at '/'"
+  - "no importance for '/' at the end"
+  - "/Users/amir/Pictures"

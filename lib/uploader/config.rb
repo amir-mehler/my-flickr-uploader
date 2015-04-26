@@ -36,7 +36,7 @@ module Uploader
       @flickr_creds = YAML.load_file(@base_dir + "/secret/api_key.yml")["api-key"]
 
       @image_extensions = IMAGE_EXTENSIONS
-      @upload_threads = 5
+      @upload_threads = 15
 
       @db_path = "#{@base_dir}/db/#{@username}.dbk"
       @other_dbs = []
@@ -48,7 +48,7 @@ module Uploader
       @logger.level = Logger::DEBUG
 
       # delete old temp files
-      File.delete "/tmp/temp_file.*" unless Dir.glob("/tmp/temp_file.*").empty?
+      Dir.glob("/tmp/temp_file.*").each { |f| File.delete f }
 
       @logger.info "<<< initialized config instance >>>"
     end
