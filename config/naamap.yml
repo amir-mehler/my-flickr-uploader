@@ -1,5 +1,5 @@
 work_dirs:
-  - "/Users/amir/Pictures/iris_and_ariel_wedding"
+  - "/Users/amir/Pictures"
 __comment__:
   - "must be full path starting at '/'"
   - "no importance for '/' at the end"

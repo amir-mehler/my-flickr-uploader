@@ -16,7 +16,6 @@ Usage:
 EOS
   opt :user, "Yahoo! user name (without @yahoo.*)", :type => :string, :required => true
 end
-conf_file = File.expand_path("../../config/#{opts[:user]}.yml",__FILE__)
 
 $: << File.expand_path("../../lib",__FILE__)
 
@@ -30,7 +29,7 @@ require 'uploader'
 # If one doesn't; download it and write it's hash sum to the DB.
 
 begin
-  fp = Uploader::FingerPrint.new conf_file
+  fp = Uploader::FingerPrint.new opts[:user]
   fp.fix_em_all!
 ensure
   fp && fp.close_db

@@ -1,15 +1,17 @@
 Work:
 -----
 
-1. think of 'smart start'. will pull from git if need to, push if opposite. will update all indexes from flickr to db, will be able to build entire DB if missing. Will be a single entry point to the appliaction.
+1. Smart start:
+   One starting point
+   Menu for opts:
+   - all
+   - upload
+   - sync with github (plus a BD merge function)
+   - fix index
 
-5. duplicates; what if the fix_index finds the same md5sum twice?
-6. duplicates; check all photos in flickr and report duplicates (by tags)
-7. trollop for bin files
-8. cross account duplicate prevention - look in other DBs as well.
-9. hard code:   api_key: 6b3bdebf50c0a624eb7ec35c5acf2d8f && shared_secret: 4bb9d1f00accca46
-  As they are part of the application, not user details. and you can also hide the user token from the user, he should just provide his name.
-10. Add 'uploaded-from' tag (base dir and host)
+2. duplicates; what if the fix_index finds the same md5sum twice?
+3. duplicates; check all photos in flickr and report duplicates (by tags)
+4. Add 'uploaded-from' tag (base dir and host)
 
 Wishlist
 --------

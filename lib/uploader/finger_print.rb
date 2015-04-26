@@ -15,8 +15,8 @@ module Uploader
     # version 1: 'fp1_dcfe25f0fa9811ef96cbe87c0d85d56e'
     V1 = /^fp1_\h{32}$/
 
-    def initialize(conf_file)
-      @conf = Uploader::Config.instance conf_file
+    def initialize(user)
+      @conf = Uploader::Config.instance user
       @log = @conf.logger
 
       Uploader::FlickrAuth.authenticate(@conf)
