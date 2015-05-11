@@ -22,7 +22,7 @@ module Uploader
     # Opt: validate that each photo found in DB is really in flickr with matching ID and hash tag
 
     UPLOAD_WAIT = 5 # seconds
-    UPLOAD_TIMEOUT = 600 # seconds
+    UPLOAD_TIMEOUT = 1200 # seconds
 
     def initialize(db, queue, uploaders)
       @conf = Uploader::Config.instance
@@ -61,7 +61,7 @@ module Uploader
 
     def upload_photo(file, sum, base_dir)
       while @q.size > (@conf.upload_threads * 2)
-        @log.debug "waiting for uploaders..." if (@wait_count % 10).zero?
+        @log.debug "waiting for uploaders..." if (@wait_count % 20).zero?
         @wait_count += 1
         raise "no uploaders - aborting crawler" unless file_uploaders_alive?
         raise "this is taking too long. Aborting" if @wait_count > (UPLOAD_TIMEOUT/UPLOAD_WAIT)

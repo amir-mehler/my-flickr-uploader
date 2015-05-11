@@ -20,9 +20,11 @@ module Uploader
       @conf.other_dbs = @other_dbs
       @file_uploaders = []
       @upload_queue = Queue.new
+      @crawler = nil
     end
 
     def close
+      @crawler.exit
       gracefully_close_threads
 
       @log.debug "closing dbs"
@@ -34,6 +36,7 @@ module Uploader
     end
 
     def gracefully_close_threads
+      @upload_queue.size.times   { @upload_queue.pop }    # empty the queue
       @conf.upload_threads.times { @upload_queue << nil } # next round will kill each thread during q.pop
 
       sleep 1
@@ -71,8 +74,12 @@ module Uploader
 
       @log.debug "file uploaders is: #{@file_uploaders}"
 
-      Uploader::DirCrawler.new(@db, @upload_queue, @file_uploaders).run! # todo: this should also be a thread we can gracefully stop
-      
+      @crawler = Thread.new {
+        Uploader::DirCrawler.new(@db, @upload_queue, @file_uploaders).run!
+      }
+
+      @crawler.join
+
       # at this point we are done, but you need to call 'close' to really wrap things up
     end
   end

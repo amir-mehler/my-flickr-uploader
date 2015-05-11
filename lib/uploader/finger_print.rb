@@ -103,8 +103,14 @@ module Uploader
     end
 
     def set_tag_v1(hash, id)
+      tries = CountDown.new(API_RETRIES)
       @log.info "setting tag: fp1_#{hash} on photo #{id}"
-      flickr.photos.addTags(photo_id: id, tags: "fp1_#{hash}")
+      begin
+        flickr.photos.addTags(photo_id: id, tags: "fp1_#{hash}")
+      rescue => e
+        retry unless tries.zero?
+        raise e
+      end
     end
 
     # Stream the file into MD5 and return the hexdigest

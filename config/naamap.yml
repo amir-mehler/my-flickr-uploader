@@ -1,8 +1,9 @@
 work_dirs:
-  - "/Users/amir/Pictures"
+  - "/Users/amir/Pictures/sd_upload/"
 __comment__:
   - "must be full path starting at '/'"
   - "no importance for '/' at the end"
   - "/Users/amir/Pictures"
   - "Mehler - old scans/wedding"
   - "/Volumes/Elements/PHOTOS"
+  - "/Volumes/NIKON\ D7000/DCIM/101D7000/"

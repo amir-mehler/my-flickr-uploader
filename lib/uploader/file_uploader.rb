@@ -13,13 +13,21 @@ module Uploader
       @temp_file = "/tmp/temp_file.#{Thread.current.object_id}"
     end
 
-    # Pop from queue, try to upload to Flickr. That's it.
+    # Pop from queue,
+    # try to upload to Flickr.
+    # failed? push back to queue.
+    # success? That's it.
     def run!
       @log.info "uploder thread started! (#{Thread.current.object_id})"
       begin
         while i = @q.pop
           @log.debug "starting upload of #{File.basename(i[:file])} #{i[:sum]}"
-          upload i[:file], i[:sum], i[:basedir]
+          begin
+            upload i[:file], i[:sum], i[:basedir]
+          rescue
+            sleep 10 # wait for a bit
+            @q << i
+          end
         end
         @log.info "uploader thread done! (#{Thread.current.object_id})"
       rescue => e
@@ -61,14 +69,34 @@ module Uploader
         File.symlink file, @temp_file
         id = flickr.upload_photo @temp_file, args
         @log.info "[UPLOADED symlink] name: #{title}, id: #{id}"
-      rescue Net::ReadTimeout => e
-        @log.error "upload timeout (retrying)"
-        retry unless tries.zero?
-        raise ThreadError, TIMEOUT_MSG
+      # rescue Net::ReadTimeout => e
+      #   @log.error "upload timeout (retrying)"
+      #   retry unless tries.zero?
+      #   raise ThreadError, TIMEOUT_MSG
+      # rescue JSON::ParserError => e
+      #   if e.message.include? "502 Bad Gateway"
+      #     @log.error "Connectivity issues (retrying)"
+      #     retry unless tries.zero?
+      #   end
+      #   @log.error "[FAILED upload/json] #{file}. Message: #{e.message}. Class: #{e.class}"
+      #   @log.error e.backtrace.join("\n")
+      #   raise e
+      # rescue EOFError => e
+      #   unless tries.zero?
+      #     @log.error "eof error (retrying)"
+      #     retry
+      #   else
+      #     raise e
+      #   end
       rescue => e
-        @log.error "[FAILED upload] #{file}. Message: #{e.message}. Class: #{e.class}"
-        @log.error e.backtrace.join("\n")
-        raise e
+        if tries.zero?
+          @log.error "[FAILED upload] #{file}. Message: #{e.message}. Class: #{e.class}"
+          @log.error e.backtrace.join("\n")
+          raise e
+        else
+          @log.error "problem uploading (#{e.class}). retrying."
+          retry
+        end
       end
       # only if upload was ok we update the db
       begin
