@@ -1,5 +1,5 @@
 work_dirs:
-  - "/Users/amir/Pictures/sd_upload/"
+  - "/Volumes/amirmehler/PHOTOS"
 __comment__:
   - "must be full path starting at '/'"
   - "no importance for '/' at the end"
