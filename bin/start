@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+
+unless RUBY_VERSION.match(/^2\./)
+  puts "Better use ruby 2.*"
+  exit 1
+end
+
+# hard code your username here:
+yahoo_user = 'naamap'
+unless yahoo_user
+  raise"Configure your yahoo username in this file!"
+end
+
+ALL_OPTS = [ { "all" =>       "Do everything you know" },
+             { "sync-db" =>   "Sync local DB index with github repo" },
+             { "upload" =>    "Upload new photos to flickr" },
+             { "fix-index" => "Fix all unindexed photos on flickr" },
+             { "dups" =>      "Report all duplicate photos in your flickr account" } ]
+
+if ALL_OPTS.map { |h| h.keys.first }.include? ARGV[0]
+  option = ARGV[0]
+else
+  puts "Pick one option please: "
+  ALL_OPTS.each_with_index { |h,i| puts "#{i+1}) #{h.keys.first}  \t: #{h.values.first}." }
+  print "Choose: "
+  STDOUT.flush
+  i = gets.chomp.to_i
+  if i < 1 || i > ALL_OPTS.size
+    puts "Bahhh.... expected 1..#{ALL_OPTS.size}"
+    exit 1
+  else
+    option = ALL_OPTS[i-1].keys.first
+  end
+end
+
+puts "going forward with #{yahoo_user} and #{option}"
+exit 1
+
+# # # ################################
+$: << File.expand_path("../../lib",__FILE__)
+
+Dir.chdir(File.expand_path("../../",__FILE__)) do
+  require "bundler/setup"
+end
+
+require 'uploader'
+
+# Parse all photos in flickr and check that each photo ID has a DB entry
+# If one doesn't; download it and write it's hash sum to the DB.
+
+begin
+  fp = Uploader::FingerPrint.new opts[:user]
+  fp.fix_em_all!
+ensure
+  fp && fp.close_db
+end

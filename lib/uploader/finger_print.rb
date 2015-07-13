@@ -85,11 +85,16 @@ module Uploader
           else # no tag, get photo and calc hash sum
             sizes = flickr.photos.getSizes(photo_id: id)
             original = sizes.find { |s| s["label"] == "Original" }
-            @log.debug "streaming photo into md5: #{original["source"]}"
-            hash = uri_to_md5 URI(original["source"])
-            @log.info "photo #{id} was not index yet; got hash: #{hash}, adding to db"
-            set_hash_and_id(hash, id)
-            set_tag_v1(hash, id)
+            unless original
+              @log.warn "failed to find original copy of photo #{id}, skipping (might be a video)"
+            else
+              @log.debug "streaming photo into md5: (original) #{original}"
+              @log.debug "streaming photo into md5: ( source ) #{original["source"]}"
+              hash = uri_to_md5 URI(original["source"])
+              @log.info "photo #{id} was not index yet; got hash: #{hash}, adding to db"
+              set_hash_and_id(hash, id)
+              set_tag_v1(hash, id)
+            end
           end
         end
       end

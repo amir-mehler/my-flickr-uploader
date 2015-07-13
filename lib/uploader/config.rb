@@ -42,10 +42,11 @@ module Uploader
       @other_dbs = []
 
       log_file = File.open(@base_dir + "/log/uploader_log", 'a')
-      @logger = Logger.new Uploader::MultiIO.new(STDOUT, log_file), "daily"
-#     @logger = Logger.new STDOUT
+#     @logger = Logger.new Uploader::MultiIO.new(STDOUT, log_file), "daily"
+      @logger = Logger.new STDOUT
       @logger.datetime_format = '%d-%m-%Y %H:%M:%S'
-      @logger.level = Logger::DEBUG
+      @logger.level = Logger::INFO
+#     @logger.level = Logger::DEBUG
 
       # delete old temp files
       Dir.glob("/tmp/temp_file.*").each { |f| File.delete f }
