@@ -1,8 +1,6 @@
 work_dirs:
-  - "/Users/amir/Pictures/iris_and_ariel_wedding"
+  - "/Users/amirmlr/Pictures"
 __comment__:
   - "must be full path starting at '/'"
   - "no importance for '/' at the end"
   - "/Users/amir/Pictures"
-  - "Mehler - old scans/wedding"
-  - "/Volumes/Elements/PHOTOS"
