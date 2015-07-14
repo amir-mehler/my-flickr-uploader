@@ -15,12 +15,13 @@ Ruby uploader to Flickr - based on flickraw
 2. run bundle install (install the bundle gem if you don't have it).
 3. create a folder called `secret` and place the **api_key.yml** file I sent you in it.
 4. create a config file for you user and put it in a `config` folder. For example, **amir-mehler.yml**: 
-`
+```
 work_dirs:
   - "/Users/amirmlr/Pictures"
 __comment__:
   - "must be full path starting at '/'"
-  - "no importance for '/' at the end"`
+  - "no importance for '/' at the end"
+```
 5. start doing things like: 
 ```
 $ bin/start_uploader --user amir-mehler
