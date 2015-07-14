@@ -23,7 +23,8 @@ __comment__:
   - "no importance for '/' at the end"`
 5. start doing things like: 
 ```
-$ bin/start_uploader --user amir-mehler```
+$ bin/start_uploader --user amir-mehler
+```
 
 ### Also consider
 
