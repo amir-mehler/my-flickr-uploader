@@ -5,7 +5,12 @@ unless RUBY_VERSION.match(/^2\./)
   exit 1
 end
 
-raise "implement the user selection thingy"
+# raise "implement the user selection thingy"
+
+# Check duplicate: 17292611759 and 16858447233
+# https://www.flickr.com/photos/119737768@N08/17292611759/
+# https://www.flickr.com/photos/119737768@N08/16858447233/
+
 
 require 'daybreak'
 
@@ -20,6 +25,28 @@ begin
   path = File.expand_path('../../db/naamap.dbk',__FILE__)
   raise "cant'f find db file: #{path}" unless File.exist? path
   db = Daybreak::DB.new path
+
+  # Let's explain this a little.
+
+  # How did a picture end up twice on flickr? it was upload from two devices
+  # (not running this mighty tool).
+  # So what will happen when we index them?
+  #
+  # 1) Since the first photo has no md5sum tag - We'll set the pictured id 'i1'
+  #    and the picture sum 's' in the DB:
+  #    db['i1'] = 's'
+  #    db['s'] = 'i1'
+  # 2) The second one, same thing, now we store: 'i2' and 's'
+  #    db['i2'] = 's'
+  #    db['s'] = 'i2'
+  #
+  # Now the entry at db['i1'] is redundant (let's call it "broken"). And the picture with this ID is a 
+  # duplicate.
+  #
+  # Mitigation:
+  # 1) Before indexing the second picture, validate it's sum as well as ID. If
+  #    it's duplicate - DELETE IT.
+  # 2) Search the DB for "broken" db pairs. Delete the photo with this ID and DB entry.
 
   db.each do |k,v|
     next if db[v] == k || k.match(/^\//) # match or starts with '/'

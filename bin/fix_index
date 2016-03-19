@@ -14,7 +14,7 @@ Usage:
        start_uploader --user <amir> (file must exist here: config/amir.yml)
 
 EOS
-  opt :user, "Yahoo! user name (without @yahoo.*)", :type => :string, :required => true
+  opt :user, "Yahoo! user name (without @yahoo.*)", :type => :string, :default => "naamap" # :required => true
 end
 
 $: << File.expand_path("../../lib",__FILE__)
@@ -29,6 +29,7 @@ require 'uploader'
 # If one doesn't; download it and write it's hash sum to the DB.
 
 begin
+  puts "Using user #{opts[:user]}"
   fp = Uploader::FingerPrint.new opts[:user]
   fp.fix_em_all!
 ensure

@@ -14,6 +14,7 @@ module Uploader
         # conf.logger.debug "creds are: #{creds}"
 
         # API creds (for this app, regardless of user)
+        puts "DEBUG #{creds}  secret: #{creds["secret"]}"
         if creds["key"] && creds["secret"]
           # conf.logger.debug "Using API creds #{creds["key"]} #{creds["secret"]}"
           FlickRaw.api_key       = creds["key"]
