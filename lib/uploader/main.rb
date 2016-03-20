@@ -11,7 +11,7 @@ module Uploader
       @conf = Uploader::Config.instance user
       @log = @conf.logger
       Uploader::FlickrAuth.authenticate @conf
-      @db = Daybreak::DB.new @conf.db_path # HERE !!!
+      @db = Daybreak::DB.new @conf.db_path
       @other_dbs = Dir.glob(@conf.base_dir + "/db/*.dbk").inject([]) do |dbs,other_db|
         dbs << Daybreak::DB.new(other_db) unless other_db == @conf.db_path
         dbs

@@ -1,19 +1,17 @@
 Work:
 -----
 
-1. Smart start:
+1. validate_db_pairs: make sure corresponding photo is really in flickr. Delete from db.
+2. Add 'reset dirs' command to reset DB for a new computer
+3. Smart start:
    One starting point - one job
    1. Get last run status from a json in the DB
-   2. Fix all indices - if this wasn't done in the last 24 hours
-   3. Upload DB to github once index is fixed
-   4. Upload photos
-   5. Uplaod DB to github once done uploading
+   2. Fix all indices - (quickly, with many threads) if this wasn't done in the last 12 hours
+   3. Validate DB pairs: report duplicates
+   4. Upload DB to github once index is fixed
+   5. Upload photos
+   6. Uplaod DB to github once done uploading
 
-2. Make the 'fix index' run in parallel
-3. Add 'reset dirs' command to reset DB for a new computer
-2. duplicates; what if the fix_index finds the same md5sum twice?
-3. duplicates; check all photos in flickr and report duplicates (by tags)
-4. Add 'uploaded-from' tag (base dir and host)
 
 Wishlist
 --------
